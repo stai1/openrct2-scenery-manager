@@ -50,6 +50,9 @@ export default abstract class Builder extends Tool {
     protected doMergeSurface(): boolean {
         return false;
     }
+    protected isRateLimited(): boolean {
+        return false;
+    }
 
     private removeGhost(): void {
         if (this.tileData !== undefined) {
@@ -92,6 +95,7 @@ export default abstract class Builder extends Tool {
                     this.getFilter(),
                     this.doAppendToEnd(),
                     this.doMergeSurface(),
+                    !isGhost && this.isRateLimited(),
                 );
             }
             this.tileSelection = this.getTileSelection(this.coords, this.offset);

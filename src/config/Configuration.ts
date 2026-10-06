@@ -15,12 +15,36 @@ type C = {
     [index: string]: C;
 } | Property<any>;
 
+function rateLimitedActions(place: boolean, remove: boolean) {
+    return {
+        place: new BooleanProperty(place),
+        remove: new BooleanProperty(remove),
+    };
+}
+
 const Configuration = {
     tools: {
         cursorMode: new Property<CursorMode>("surface"),
         placeMode: new Property<PlaceMode>("safe"),
         showGhost: new BooleanProperty(true),
         onMissingElement: new Property<Action>("warning"),
+    },
+    rateLimit: {
+        enabled: new BooleanProperty(false),
+        intervalTicks: new NumberProperty(16, 0),
+        timeoutTicks: new NumberProperty(120, 1),
+        onTimeout: new Property<RateLimitTimeoutAction>("retry"),
+        actions: {
+            banner: rateLimitedActions(true, false),
+            entrance: rateLimitedActions(false, false),
+            footpath: rateLimitedActions(false, true),
+            footpath_addition: rateLimitedActions(false, false),
+            large_scenery: rateLimitedActions(true, false),
+            small_scenery: rateLimitedActions(true, false),
+            surface: rateLimitedActions(false, false),
+            track: rateLimitedActions(false, false),
+            wall: rateLimitedActions(true, false),
+        } as { [key: string]: ReturnType<typeof rateLimitedActions> },
     },
     paste: {
         restrictedHeightHotkeys: new BooleanProperty(true),
@@ -65,6 +89,14 @@ export function load(obj: C = Configuration, path: string = "config"): void {
     } else
         for (let key in obj)
             load(obj[key], path + "." + key);
+}
+
+export function reset(obj: C): void {
+    if (isProperty(obj))
+        obj.reset();
+    else
+        for (let key in obj)
+            reset(obj[key]);
 }
 
 function isProperty(obj: C): obj is Property<any> {

@@ -20,6 +20,10 @@ type CursorMode =
     "surface" |
     "scenery";
 
+type RateLimitTimeoutAction =
+    "retry" |
+    "continue";
+
 type SceneryFilterType =
     "footpath" |
     "small_scenery" |

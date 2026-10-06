@@ -80,6 +80,9 @@ const builder = new class extends Builder {
     protected doMergeSurface(): boolean {
         return Configuration.paste.mergeSurface.getValue();
     }
+    protected isRateLimited(): boolean {
+        return true;
+    }
 
     protected getTileData(
         coords: CoordsXY,
@@ -254,9 +257,9 @@ export function copy(cut: boolean = false): void {
 
             if (cut) {
                 if (filter(element.type) && (element.type !== "surface" || cutSurface))
-                    Map.remove(tile, element, placeMode, false);
+                    Map.remove(tile, element, placeMode, false, undefined, true);
                 if (element.type === "footpath" && filter("footpath_addition"))
-                    Map.remove(tile, element, placeMode, true);
+                    Map.remove(tile, element, placeMode, true, undefined, true);
             }
         });
         return {

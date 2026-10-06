@@ -7,8 +7,36 @@
 
 import * as Strings from "../../utils/Strings";
 
-import Configuration from "../../config/Configuration";
+import Configuration, { reset } from "../../config/Configuration";
 import GUI from "../../gui/GUI";
+
+// two element types per row, each with a place and a delete checkbox
+function getRateLimitedActionRows(): GUI.HBox[] {
+    const grid = [9, 3, 3, 9, 3, 3];
+    const isDisabled = (label: GUI.Label | GUI.Checkbox) => label.bindIsDisabled(
+        Configuration.rateLimit.enabled,
+        enabled => !enabled,
+    );
+    const types = Object.keys(Configuration.rateLimit.actions);
+    const half = Math.ceil(types.length / 2);
+    const header = () => [
+        new GUI.Label({}),
+        isDisabled(new GUI.Label({ text: "Place" })),
+        isDisabled(new GUI.Label({ text: "Delete" })),
+    ];
+    const cells = (type: string) => [
+        isDisabled(new GUI.Label({ text: Strings.toDisplayString(type) })),
+        isDisabled(new GUI.Checkbox({}).bindValue(Configuration.rateLimit.actions[type].place)),
+        isDisabled(new GUI.Checkbox({}).bindValue(Configuration.rateLimit.actions[type].remove)),
+    ];
+    const rows = [new GUI.HBox(grid).add(...header(), ...header())];
+    for (let i = 0; i < half; i++)
+        rows.push(new GUI.HBox(grid).add(
+            ...cells(types[i]),
+            ...(i + half < types.length ? cells(types[i + half]) : []),
+        ));
+    return rows;
+}
 
 export default new GUI.Tab({
     image: {
@@ -58,6 +86,76 @@ export default new GUI.Tab({
                 Strings.toDisplayString,
             ),
         ),
+    ), new GUI.GroupBox({
+        text: "Rate Limit",
+    }).add(
+        // narrow checkbox, so that clicking the empty space next to it doesn't toggle it
+        new GUI.HBox([4, 11, 7]).add(
+            new GUI.Checkbox({
+                text: "Enabled",
+            }).bindValue(
+                Configuration.rateLimit.enabled,
+            ),
+            new GUI.Space(),
+            new GUI.TextButton({
+                text: "Reset to defaults",
+                // everything but the enabled checkbox
+                onClick: () => {
+                    Configuration.rateLimit.intervalTicks.reset();
+                    Configuration.rateLimit.timeoutTicks.reset();
+                    Configuration.rateLimit.onTimeout.reset();
+                    reset(Configuration.rateLimit.actions);
+                },
+            }),
+        ),
+        new GUI.HBox([16, 5]).add(
+            new GUI.Label({
+                text: "Interval (game ticks):",
+            }).bindIsDisabled(
+                Configuration.rateLimit.enabled,
+                enabled => !enabled,
+            ),
+            new GUI.Spinner({
+            }).bindValue(
+                Configuration.rateLimit.intervalTicks,
+            ).bindIsDisabled(
+                Configuration.rateLimit.enabled,
+                enabled => !enabled,
+            ),
+        ),
+        new GUI.HBox([16, 5]).add(
+            new GUI.Label({
+                text: "Timeout (game ticks):",
+            }).bindIsDisabled(
+                Configuration.rateLimit.enabled,
+                enabled => !enabled,
+            ),
+            new GUI.Spinner({
+            }).bindValue(
+                Configuration.rateLimit.timeoutTicks,
+            ).bindIsDisabled(
+                Configuration.rateLimit.enabled,
+                enabled => !enabled,
+            ),
+        ),
+        new GUI.HBox([16, 5]).add(
+            new GUI.Label({
+                text: "On timeout:",
+            }).bindIsDisabled(
+                Configuration.rateLimit.enabled,
+                enabled => !enabled,
+            ),
+            new GUI.Dropdown({
+            }).bindValue<RateLimitTimeoutAction>(
+                Configuration.rateLimit.onTimeout,
+                ["retry", "continue"],
+                Strings.toDisplayString,
+            ).bindIsDisabled(
+                Configuration.rateLimit.enabled,
+                enabled => !enabled,
+            ),
+        ),
+        ...getRateLimitedActionRows(),
     ), new GUI.GroupBox({
         text: "Paste Tool",
     }).add(

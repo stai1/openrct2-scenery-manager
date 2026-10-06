@@ -10,6 +10,7 @@ import * as SmallScenery from "../template/SmallScenery";
 import * as Arrays from "../utils/Arrays";
 import * as Coordinates from "../utils/Coordinates";
 import * as Objects from "../utils/Objects";
+import * as ActionQueue from "./ActionQueue";
 import * as Context from "./Context";
 
 import Template from "../template/Template";
@@ -53,16 +54,18 @@ export function place(
     filter: TypeFilter = () => true,
     appendToEnd: boolean = false,
     mergeSurface: boolean = false,
+    rateLimited: boolean = false,
 ): void {
     if (mode === "safe") {
         // TODO: ensure order in async case for all types
         const flags = isGhost ? 72 : 0;
+        const execute = rateLimited ? ActionQueue.enqueue : Context.queryExecuteActionCallback;
         // walls
         if (filter("wall"))
             templateData.forEach(tileData =>
                 tileData.elements.forEach(element => {
                     if (element.type === "wall")
-                        Template.getPlaceActionData(tileData, element, flags).forEach(Context.queryExecuteAction);
+                        Template.getPlaceActionData(tileData, element, flags).forEach(data => execute(data));
                 })
             );
         // paths
@@ -72,14 +75,14 @@ export function place(
                     if (element.type === "footpath") {
                         if (filter("footpath"))
                             Template.getPlaceActionData(tileData, element, flags).forEach(
-                                data => Context.queryExecuteActionCallback(data, _ => {
+                                data => execute(data, _ => {
                                     if (element.additionQualifier !== null && filter("footpath_addition"))
-                                        Footpath.getPlaceActionData(Coordinates.toWorldCoords(tileData), element, flags, true).forEach(Context.queryExecuteAction);
+                                        Footpath.getPlaceActionData(Coordinates.toWorldCoords(tileData), element, flags, true).forEach(data => execute(data));
                                 })
                             );
                         // duplicate code below
                         if (element.additionQualifier !== null && filter("footpath_addition"))
-                            Footpath.getPlaceActionData(Coordinates.toWorldCoords(tileData), element, flags, true).forEach(Context.queryExecuteAction);
+                            Footpath.getPlaceActionData(Coordinates.toWorldCoords(tileData), element, flags, true).forEach(data => execute(data));
                     }
                 })
             );
@@ -87,7 +90,7 @@ export function place(
         templateData.forEach(tileData =>
             tileData.elements.forEach(element => {
                 if (element.type !== "wall" && element.type !== "footpath" && filter(element.type))
-                    Template.getPlaceActionData(tileData, element, flags).forEach(Context.queryExecuteAction);
+                    Template.getPlaceActionData(tileData, element, flags).forEach(data => execute(data));
             })
         );
     } else
@@ -159,7 +162,9 @@ export function remove(
     mode: PlaceMode,
     additionOnly: boolean = false,
     callback?: (result: GameActionResult) => void,
+    rateLimited: boolean = false,
 ): void {
+    const execute = rateLimited ? ActionQueue.enqueue : Context.queryExecuteActionCallback;
     if (mode === "safe")
         if (element.type === "footpath" && additionOnly)
             Footpath.getRemoveActionData(
@@ -168,7 +173,7 @@ export function remove(
                 element.isAdditionGhost ? 72 : 0,
                 true,
             ).forEach(
-                data => Context.queryExecuteActionCallback(data, callback)
+                data => execute(data, callback)
             );
         else
             // workaround to handle objects that are loaded twice: use the correct index
@@ -182,7 +187,7 @@ export function remove(
                     Template.copyFrom(element),
                     element.isGhost ? 72 : 0,
                 )).forEach(
-                    data => Context.queryExecuteActionCallback(data, callback)
+                    data => execute(data, callback)
                 );
     else {
         removeElement(tile, element, additionOnly);

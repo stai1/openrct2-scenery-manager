@@ -7,10 +7,16 @@
 
 export default class Property<T> implements Observable<T> {
     private value: T;
+    private readonly defaultValue: T;
     private readonly observers: Observer<T>[] = [];
 
     public constructor(defaultValue: T) {
         this.value = defaultValue;
+        this.defaultValue = defaultValue;
+    }
+
+    public reset(): void {
+        this.setValue(this.defaultValue);
     }
 
     public getValue(): T {
